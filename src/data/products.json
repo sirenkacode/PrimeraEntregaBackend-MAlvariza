@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "title": "Mouse gamer RGB",
+    "description": "Mouse con luces RGB y 6 botones",
+    "code": "MOU001",
+    "price": 50,
+    "status": true,
+    "stock": 20,
+    "category": "perifericos",
+    "thumbnails": [
+      "img/mouse1.png"
+    ]
+  }
+]
