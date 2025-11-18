@@ -1,0 +1,19 @@
+{{!-- src/views/home.handlebars --}}
+<h2>Listado de productos (Home)</h2>
+
+{{#if products.length}}
+  <ul>
+    {{#each products}}
+      <li>
+        <strong>{{this.title}}</strong> - ${{this.price}}
+        (id: {{this.id}})
+      </li>
+    {{/each}}
+  </ul>
+{{else}}
+  <p>No hay productos cargados.</p>
+{{/if}}
+
+<p>
+  <a href="/realtimeproducts">Ir a la vista en tiempo real</a>
+</p>

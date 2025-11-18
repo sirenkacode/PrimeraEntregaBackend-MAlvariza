@@ -1,0 +1,80 @@
+{{!-- src/views/realTimeProducts.handlebars --}}
+<h2>Productos en tiempo real</h2>
+
+<div id="messages" style="color: red;"></div>
+
+<section>
+  <h3>Listado de productos</h3>
+
+  <ul id="products-list">
+    {{#if products.length}}
+      {{#each products}}
+        <li data-id="{{this.id}}">
+          <strong>{{this.title}}</strong> - ${{this.price}}
+          (id: {{this.id}})
+        </li>
+      {{/each}}
+    {{else}}
+      <li>No hay productos cargados.</li>
+    {{/if}}
+  </ul>
+</section>
+
+<hr />
+
+<section>
+  <h3>Crear producto (vía WebSocket)</h3>
+  <form id="product-form">
+    <div>
+      <label>Título:</label>
+      <input type="text" name="title" required />
+    </div>
+    <div>
+      <label>Descripción:</label>
+      <input type="text" name="description" required />
+    </div>
+    <div>
+      <label>Código:</label>
+      <input type="text" name="code" required />
+    </div>
+    <div>
+      <label>Precio:</label>
+      <input type="number" name="price" required />
+    </div>
+    <div>
+      <label>Stock:</label>
+      <input type="number" name="stock" required />
+    </div>
+    <div>
+      <label>Categoría:</label>
+      <input type="text" name="category" required />
+    </div>
+    <div>
+      <label>Thumbnails (URLs separadas por coma):</label>
+      <input type="text" name="thumbnails" />
+    </div>
+    <div>
+      <label>Activo:</label>
+      <input type="checkbox" name="status" checked />
+    </div>
+
+    <button type="submit">Crear producto</button>
+  </form>
+</section>
+
+<hr />
+
+<section>
+  <h3>Eliminar producto (vía WebSocket)</h3>
+  <form id="delete-form">
+    <div>
+      <label>ID del producto:</label>
+      <input type="text" name="pid" required />
+    </div>
+    <button type="submit">Eliminar producto</button>
+  </form>
+</section>
+
+{{!-- Socket.io client y nuestro script de frontend --}}
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/realTimeProducts.js"></script>

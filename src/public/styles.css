@@ -1,0 +1,13 @@
+/* src/public/styles.css */
+body {
+  font-family: system-ui, sans-serif;
+  margin: 1.5rem;
+}
+
+header nav a {
+  margin-right: 0.5rem;
+}
+
+form > div {
+  margin-bottom: 0.5rem;
+}

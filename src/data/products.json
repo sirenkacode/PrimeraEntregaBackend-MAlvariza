@@ -4,12 +4,38 @@
     "title": "Mouse gamer RGB",
     "description": "Mouse con luces RGB y 6 botones",
     "code": "MOU001",
-    "price": 50,
+    "price": 3,
     "status": true,
-    "stock": 20,
+    "stock": 2,
     "category": "perifericos",
     "thumbnails": [
       "img/mouse1.png"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Mouse gamer RGBzzz",
+    "description": "Mouse con luces RGB y 6 botones",
+    "code": "MOU001",
+    "price": 45,
+    "status": true,
+    "stock": 25,
+    "category": "perifericos",
+    "thumbnails": [
+      "img/mouse1.png"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "TEst",
+    "description": "test",
+    "code": "test",
+    "price": 200,
+    "status": true,
+    "stock": 2,
+    "category": "test",
+    "thumbnails": [
+      "test"
     ]
   }
 ]
