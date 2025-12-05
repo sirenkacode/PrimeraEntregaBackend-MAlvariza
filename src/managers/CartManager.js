@@ -1,49 +1,108 @@
-import { readJSON, writeJSON } from '../utils/fileDb.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CARTS_PATH = path.join(__dirname, '..', 'data', 'carts.json');
+// src/managers/CartManager.js
+import CartModel from '../dao/models/cart.model.js';
 
 export default class CartManager {
   async getAll() {
-    return await readJSON(CARTS_PATH, []);
+    return await CartModel.find().lean();
   }
 
-  async getById(id) {
-    const carts = await this.getAll();
-    return carts.find(c => String(c.id) === String(id)) || null;
+  async getById(id, { populate = false } = {}) {
+    let query = CartModel.findById(id);
+    if (populate) {
+      query = query.populate('products.product');
+    }
+    const cart = await query.lean();
+    return cart || null;
   }
 
   async create() {
-    const carts = await this.getAll();
-    const nextId = carts.length ? Math.max(...carts.map(c => Number(c.id))) + 1 : 1;
-    const newCart = { id: nextId, products: [] };
-    carts.push(newCart);
-    await writeJSON(CARTS_PATH, carts);
-    return newCart;
+    const newCart = await CartModel.create({ products: [] });
+    return newCart.toObject();
   }
 
   async addProduct(cid, pid, quantity = 1) {
-    const carts = await this.getAll();
-    const cartIdx = carts.findIndex(c => String(c.id) === String(cid));
-    if (cartIdx === -1) {
+    const cart = await CartModel.findById(cid);
+    if (!cart) {
       const err = new Error('Carrito no encontrado');
       err.status = 404;
       throw err;
     }
 
-    const cart = carts[cartIdx];
-    const itemIdx = cart.products.findIndex(p => String(p.product) === String(pid));
+    const qty = Number(quantity) || 1;
+    const existing = cart.products.find(
+      p => String(p.product) === String(pid)
+    );
 
-    if (itemIdx === -1) {
-      cart.products.push({ product: String(pid), quantity: Number(quantity) || 1 });
+    if (existing) {
+      existing.quantity += qty;
     } else {
-      cart.products[itemIdx].quantity += Number(quantity) || 1;
+      cart.products.push({ product: pid, quantity: qty });
     }
 
-    carts[cartIdx] = cart;
-    await writeJSON(CARTS_PATH, carts);
-    return cart;
+    await cart.save();
+    // devolvemos con populate para que ya venga completo
+    return (await cart.populate('products.product')).toObject();
+  }
+
+  async updateProducts(cid, productsArray) {
+    const cart = await CartModel.findById(cid);
+    if (!cart) {
+      const err = new Error('Carrito no encontrado');
+      err.status = 404;
+      throw err;
+    }
+
+    cart.products = productsArray.map(p => ({
+      product: p.product,
+      quantity: Number(p.quantity) || 1
+    }));
+
+    await cart.save();
+    return (await cart.populate('products.product')).toObject();
+  }
+
+  async updateProductQuantity(cid, pid, quantity) {
+    const cart = await CartModel.findById(cid);
+    if (!cart) {
+      const err = new Error('Carrito no encontrado');
+      err.status = 404;
+      throw err;
+    }
+
+    const item = cart.products.find(p => String(p.product) === String(pid));
+    if (!item) {
+      const err = new Error('Producto no existe en el carrito');
+      err.status = 404;
+      throw err;
+    }
+
+    item.quantity = Number(quantity) || 1;
+    await cart.save();
+    return (await cart.populate('products.product')).toObject();
+  }
+
+  async deleteProduct(cid, pid) {
+    const cart = await CartModel.findById(cid);
+    if (!cart) {
+      const err = new Error('Carrito no encontrado');
+      err.status = 404;
+      throw err;
+    }
+
+    cart.products = cart.products.filter(p => String(p.product) !== String(pid));
+    await cart.save();
+    return (await cart.populate('products.product')).toObject();
+  }
+
+  async clearCart(cid) {
+    const cart = await CartModel.findById(cid);
+    if (!cart) {
+      const err = new Error('Carrito no encontrado');
+      err.status = 404;
+      throw err;
+    }
+    cart.products = [];
+    await cart.save();
+    return cart.toObject();
   }
 }

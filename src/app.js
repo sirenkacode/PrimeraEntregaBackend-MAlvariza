@@ -5,6 +5,7 @@ import { Server as IOServer } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { engine } from 'express-handlebars';
+import mongoose from 'mongoose';
 
 import productsRouter from './routes/products.router.js';
 import cartsRouter from './routes/carts.router.js';
@@ -18,62 +19,63 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = new IOServer(httpServer);
 
-// ---------- CONFIG GENERAL ----------
+// Manager para la parte de WebSockets / vistas
+const manager = new ProductManager();
+
+// ---------- Middlewares ----------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Static (para JS / CSS del front)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------- HANDLEBARS ----------
+// ---------- Handlebars ----------
 app.engine('handlebars', engine());
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
 
-// ---------- ROUTERS ----------
-app.use('/', viewsRouter); // vistas (home y realtime)
-app.use('/api/products', productsRouter); // API JSON
+// ---------- Routers ----------
+app.use('/api/products', productsRouter);
 app.use('/api/carts', cartsRouter);
+app.use('/', viewsRouter); // vistas
 
-// Salud sencilla para chequear
-app.get('/ping', (_req, res) => {
-  res.send('API e-commerce + views + websockets OK');
-});
+// ---------- Manejo de errores ----------
+app.use((err, req, res, _next) => {
+  console.error('ERROR:', err);
 
-// ---------- ERROR HANDLER ----------
-app.use((err, _req, res, _next) => {
   const status = err.status || 500;
-  res.status(status).json({
-    error: err.message || 'Error interno del servidor'
-  });
-});
+  const message = err.message || 'Error interno del servidor';
 
-// ---------- SOCKET.IO + PRODUCTOS ----------
-const manager = new ProductManager();
-
-io.on('connection', async socket => {
-  console.log('Cliente conectado vía WebSocket');
-
-  try {
-    const products = await manager.getAll();
-    socket.emit('products', products);
-  } catch (e) {
-    console.error('Error al enviar productos iniciales:', e.message);
+  if (req.originalUrl.startsWith('/api/')) {
+    return res.status(status).json({ status: 'error', error: message });
   }
 
-  // Crear producto desde el front via WS
+  res.status(status).send(`<h1>Error</h1><p>${message}</p>`);
+});
+
+// ---------- Socket.io ----------
+io.on('connection', async socket => {
+  console.log('Cliente conectado por WebSocket');
+
+  try {
+    const products = await manager.getAll(); // trae todos los productos desde Mongo
+    socket.emit('products', products);
+  } catch (e) {
+    console.error('Error al obtener productos para realtime:', e.message);
+    socket.emit('error-message', 'Error al obtener productos iniciales');
+  }
+
+  // Crear producto vía WebSocket
   socket.on('new-product', async data => {
     try {
       await manager.create(data);
       const updated = await manager.getAll();
-      io.emit('products', updated); // actualiza a todos
+      io.emit('products', updated);
     } catch (e) {
       console.error('Error al crear producto:', e.message);
       socket.emit('error-message', e.message);
     }
   });
 
-  // Eliminar producto desde el front via WS
+  // Eliminar producto vía WebSocket
   socket.on('delete-product', async pid => {
     try {
       await manager.delete(pid);
@@ -86,7 +88,18 @@ io.on('connection', async socket => {
   });
 });
 
-const PORT = 8080;
-httpServer.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
-});
+// ---------- Mongo + servidor ----------
+const PORT = process.env.PORT || 8080;
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/coder_ecommerce';
+
+mongoose.connect(MONGO_URL)
+  .then(() => {
+    console.log('✅ Conectado a MongoDB');
+    httpServer.listen(PORT, () => {
+      console.log(`Servidor escuchando en http://localhost:${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('❌ Error conectando a MongoDB:', err);
+    process.exit(1);
+  });

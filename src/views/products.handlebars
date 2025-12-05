@@ -1,0 +1,48 @@
+{{!-- src/views/products.handlebars --}}
+<h2>Listado de productos</h2>
+
+<form method="get" action="/products" style="margin-bottom: 1rem;">
+  <label>Buscar (query):</label>
+  <input type="text" name="query" value="{{query}}" placeholder="category:Ropa o status:true" />
+
+  <label>Ordenar por precio:</label>
+  <select name="sort">
+    <option value="">--</option>
+    <option value="asc">Asc</option>
+    <option value="desc">Desc</option>
+  </select>
+
+  <label>Por página:</label>
+  <input type="number" name="limit" value="10" min="1" />
+
+  <button type="submit">Aplicar</button>
+</form>
+
+{{#if products.length}}
+  <ul>
+    {{#each products}}
+      <li style="margin-bottom: .5rem;">
+        <strong>{{this.title}}</strong>
+        - ${{this.price}}
+        - Categoría: {{this.category}}
+        - Stock: {{this.stock}}
+        <br />
+        <a href="/products/{{this._id}}">Ver detalle</a>
+      </li>
+    {{/each}}
+  </ul>
+
+  <div style="margin-top: 1rem;">
+    <p>Página {{page}} de {{totalPages}}</p>
+
+    {{#if hasPrevPage}}
+      <a href="{{prevLink}}">« Anterior</a>
+    {{/if}}
+
+    {{#if hasNextPage}}
+      <a href="{{nextLink}}" style="margin-left:.5rem;">Siguiente »</a>
+    {{/if}}
+  </div>
+{{else}}
+  <p>No hay productos cargados.</p>
+{{/if}}

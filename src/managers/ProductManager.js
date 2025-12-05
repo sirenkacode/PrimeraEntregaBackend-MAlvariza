@@ -1,18 +1,15 @@
-import { readJSON, writeJSON } from '../utils/fileDb.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PRODUCTS_PATH = path.join(__dirname, '..', 'data', 'products.json');
+// src/managers/ProductManager.js
+import ProductModel from '../dao/models/product.model.js';
 
 export default class ProductManager {
+  // Usado por vistas y websockets (trae TODOS sin paginar)
   async getAll() {
-    return await readJSON(PRODUCTS_PATH, []);
+    return await ProductModel.find().lean();
   }
 
   async getById(id) {
-    const items = await this.getAll();
-    return items.find(p => String(p.id) === String(id)) || null;
+    const product = await ProductModel.findById(id).lean();
+    return product || null;
   }
 
   async create(data) {
@@ -27,65 +24,60 @@ export default class ProductManager {
       thumbnails = []
     } = data;
 
-    // Validaciones mínimas
     if (!title || !description || !code || price == null || stock == null || !category) {
       const err = new Error('Faltan campos obligatorios: title, description, code, price, stock, category');
       err.status = 400;
       throw err;
     }
-    if (typeof price !== 'number' || typeof stock !== 'number') {
+    if (typeof Number(price) !== 'number' || typeof Number(stock) !== 'number') {
       const err = new Error('price y stock deben ser numéricos');
       err.status = 400;
       throw err;
     }
 
-    const items = await this.getAll();
-
-    // Autogenerar id incremental simple
-    const nextId = items.length ? Math.max(...items.map(p => Number(p.id))) + 1 : 1;
-
-    const newItem = {
-      id: nextId,
+    const newProduct = await ProductModel.create({
       title,
       description,
       code,
-      price,
+      price: Number(price),
       status: Boolean(status),
-      stock,
+      stock: Number(stock),
       category,
-      thumbnails: Array.isArray(thumbnails) ? thumbnails : []
-    };
+      thumbnails: Array.isArray(thumbnails)
+        ? thumbnails
+        : (typeof thumbnails === 'string' && thumbnails.trim().length
+            ? thumbnails.split(',').map(t => t.trim())
+            : [])
+    });
 
-    items.push(newItem);
-    await writeJSON(PRODUCTS_PATH, items);
-    return newItem;
+    return newProduct.toObject();
   }
 
   async update(id, data) {
-    const items = await this.getAll();
-    const idx = items.findIndex(p => String(p.id) === String(id));
-    if (idx === -1) {
+    const { _id, id: _ignored, ...rest } = data;
+
+    const updated = await ProductModel.findByIdAndUpdate(
+      id,
+      { $set: rest },
+      { new: true, runValidators: true, lean: true }
+    );
+
+    if (!updated) {
       const err = new Error('Producto no encontrado');
       err.status = 404;
       throw err;
     }
-    // No permitir cambiar/eliminar id
-    const { id: _ignored, ...rest } = data;
-    items[idx] = { ...items[idx], ...rest };
-    await writeJSON(PRODUCTS_PATH, items);
-    return items[idx];
+
+    return updated;
   }
 
   async delete(id) {
-    const items = await this.getAll();
-    const idx = items.findIndex(p => String(p.id) === String(id));
-    if (idx === -1) {
+    const deleted = await ProductModel.findByIdAndDelete(id).lean();
+    if (!deleted) {
       const err = new Error('Producto no encontrado');
       err.status = 404;
       throw err;
     }
-    const [removed] = items.splice(idx, 1);
-    await writeJSON(PRODUCTS_PATH, items);
-    return removed;
+    return deleted;
   }
 }

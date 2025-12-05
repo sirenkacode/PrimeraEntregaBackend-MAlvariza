@@ -9,9 +9,9 @@
   <ul id="products-list">
     {{#if products.length}}
       {{#each products}}
-        <li data-id="{{this.id}}">
+        <li data-id="{{this._id}}">
           <strong>{{this.title}}</strong> - ${{this.price}}
-          (id: {{this.id}})
+          (id: {{this._id}})
         </li>
       {{/each}}
     {{else}}
